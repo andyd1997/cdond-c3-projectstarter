@@ -72,9 +72,9 @@ jobs:
       - run:
           name: frontend-build
           command: |
-            ls frontend
             cd frontend
-            npm audit fix --audit-level=critical --force
+            npm install
+            npm audit --audit-level=critical
 
   scan-backend:
     docker:
@@ -84,9 +84,9 @@ jobs:
       - run:
           name: backend-build
           command: |
-            ls backend
             cd backend
-            npm audit fix --audit-level=critical --force
+            npm install
+            npm audit --audit-level=critical
             
              
     
