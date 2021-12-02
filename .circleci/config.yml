@@ -90,7 +90,7 @@ jobs:
           command: |
             ls backend
             cd backend
-            npm audit fix --audit-level=critical
+            npm audit --audit-level=critical
             
              
     
