@@ -76,7 +76,7 @@ jobs:
           command: |
             ls frontend
             cd frontend
-            npm audit --audit-level=critical
+            npm audit fix --audit-level=critical --force
 
   scan-backend:
     docker:
@@ -90,7 +90,7 @@ jobs:
           command: |
             ls backend
             cd backend
-            npm audit --audit-level=critical
+            npm audit fix --audit-level=critical --force
             
              
     
