@@ -17,7 +17,7 @@ jobs:
       - save_cache:
           paths: [frontend/node_modules]
           key: frontend-build
-            
+
   build-backend:
     docker:
       - image: circleci/node:13.8.0
@@ -28,9 +28,9 @@ jobs:
       - run:
           name: Back-end build
           command: |
-             cd backend
-             npm install
-             npm runbuid
+            cd backend
+            npm install
+            npm runbuild
       - save_cache:
           paths: [backend/node_modules]
           key: backend-build
