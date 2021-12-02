@@ -11,7 +11,7 @@ jobs:
           command: |
             cd frontend
             npm install
-            npm runbuild
+            npm run build
 
   build-backend:
     docker:
@@ -23,7 +23,7 @@ jobs:
           command: |
             cd backend
             npm install
-            npm runbuild
+            npm run build
             
              
     
