@@ -131,6 +131,39 @@ jobs:
               --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}"\
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"\
               --tags project=udapeople
+              
+  configure-infrastructure:
+    docker:
+      - image: python:3.7-alpine3.11
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints: ["71:9d:d8:d7:d9:4f:2d:a1:33:fc:c6:1e:59:46:e0:b9"]
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update ansible
+            cat .circleci/ansible/inventory.txt
+
+      - run:
+          name: Configure server
+          command: |
+            pwd
+            ls
+            echo ENVIRONMENT=production > backend/.env
+            echo TYPEORM_CONNECTION=postgres >> backend/.env
+            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> backend/.env
+            echo TYPEORM_HOST=$TYPEORM_HOST >> backend/.env
+            echo TYPEORM_PORT=$TYPEORM_PORT >> backend/.env
+            echo TYPEORM_USERNAME= $TYPEORM_USERNAME >> backend/.env
+            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> backend/.env
+            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> backend/.env
+            cat backend/.env
+            cd .circleci/ansible
+            ansible-playbook -i inventory.txt configure-server.yml
+
             
              
     
@@ -148,3 +181,4 @@ workflows:
       - scan-frontend:
           requires: [build-frontend]
       - deploy-infrastructure
+      - configure-infrastructure
