@@ -144,6 +144,7 @@ jobs:
           root: .circleci/
           paths:
             - ansible/inventory.txt
+      - destroy-environment
          
               
   configure-infrastructure:
@@ -177,6 +178,9 @@ jobs:
             cat backend/.env
             cd .circleci/ansible
             ansible-playbook -i inventory.txt configure-server.yml
+      - destroy-environment
+
+     
             
   run-migrations:
     docker:
@@ -196,6 +200,7 @@ jobs:
             then
               curl -H "Content-Type: text/plain" -H "token: 817f662a-e732-4a62-87ae-19e812bb83ce" --request PUT --data "1" https://api.memstash.io/values/udapeople_${CIRCLE_WORKFLOW_ID:0:7}
             fi
+      - destroy-environment
 
   deploy-frontend:
     docker:
@@ -229,6 +234,37 @@ jobs:
             npm run build
             tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
             aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
+      - destroy-environment
+
+  deploy-backend:
+    docker:
+      - image: python:3.7-alpine3.11
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints: ["71:9d:d8:d7:d9:4f:2d:a1:33:fc:c6:1e:59:46:e0:b9"]
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update ansible curl rsync openssh nodejs npm
+            ansible --version
+            pip install awscli
+            aws --version
+      - run:
+          name: Deploy backend
+          command: |
+            cd backend
+            npm i
+            npm run build
+            cd ..
+            tar -C backend -czvf artifact.tar.gz .
+            cd .circleci/ansible
+            echo "Contents  of the inventory.txt file is -------"
+            cat inventory.txt
+            ansible-playbook -i inventory.txt deploy-backend.yml
+      - destroy-environment 
             
              
     
@@ -252,4 +288,6 @@ workflows:
       - run-migrations:
           requires: [configure-infrastructure]
       -  deploy-frontend:
+          requires: [run-migrations]
+      - deploy-backend:
           requires: [run-migrations]
