@@ -278,37 +278,26 @@ jobs:
             pip install awscli
             aws --version
       - run:
-          name: Get backend url
+          name: get backend URL and back end smoke test
           command: |
-            export BACKEND_IP=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].PublicIpAddress' --filters "Name=tag:project,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" --output text )
-            export API_URL="http://${BACKEND_IP}:3030"
-            echo "API_URL = ${API_URL}"
-            echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
-            cat frontend/.env
-            pwd
-      - run:
-          name: Backend smoke test.
-          command: |
-            export BACKEND_URL=$(aws ec2 describe-instances --query 'Reservations[*].Instances[*].PublicIpAddress' --filters "Name=tag:Name,Values=udapeople-${CIRCLE_WORKFLOW_ID:0:7}" --output text)
-            echo http://${BACKEND_URL}:3030/api/status
-            if 
-              curl -s http://${BACKEND_URL}:3030/api/status | grep "ok"
-            then
-               exit 0
-            else
-               exit 1
-            fi  
+            BACKEND_IP=$(aws ec2 describe-instances \
+                  --filters "Name=tag:Name, Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+                  --query 'Reservations[*].Instances[*].PublicIpAddress' \
+                  --output text)
+            echo ${BACKEND_IP}
+            export URL="http://$BACKEND_IP:3030/api/status"
+            echo $URL
+            curl $URL
             
       - run:
           name: Frontend smoke test.
           command: |
-            URL="http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-eu-west-1.amazonaws.com/#/employees"            
-            echo ${URL} 
+            URL="http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-eu-west-1.amazonaws.com/index.html#/employees"
             if curl -s ${URL} | grep "Welcome"
             then
-            exit 0
+              return 0
             else
-            exit 1
+              return 1
             fi
       # Here's where you will add some code to rollback on failure  
             
