@@ -1,4 +1,3 @@
-## Deployment playbook goes here.
 - run:
       name: deploy
       command: |    
