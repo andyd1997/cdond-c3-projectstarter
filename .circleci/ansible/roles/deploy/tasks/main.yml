@@ -1,59 +1,21 @@
 ---
-- name: Update apt packages
-  become: yes
-  apt:
-    update_cache: yes
 
-- name: Upgrade Packages
-  become: yes
-  apt:
-    upgrade: yes
-
-- name: Remove dependencies that are no longer required
-  become: yes
-  apt:
-    autoremove: yes
-
-- name: Install Dependencies
-  become: yes
-  apt:
-    name: ["nodejs", "npm", "python", "tar"]
-    state: latest
-    update_cache: yes
-
-- name: Install pm2
-  become: yes
-  npm:
-    name: pm2
-    global: yes
-    production: yes
-    state: present
-
-- name: Create backend directory
+- name: "Create directory"
+  become_user: true
   file:
-    path: ~/backend
+    path: ~/udapeople/
     state: directory
 
-# https://docs.ansible.com/ansible/2.4/copy_module.html
-- name: Copy Backend Artifacts
-  copy:
-    src: ~/project/artifact.tar.gz
-    dest: ~/backend/artifact.tar.gz
-    mode: 0400
-    
-# https://docs.ansible.com/ansible/2.3/unarchive_module.html
-- name: Unarchive Backend Artifacts
-  unarchive:
-    src: ~/backend/artifact.tar.gz
-    dest: ~/backend
-    remote_src: True
 
-- name: Start Application
+- name: "deploy backend"
+  become_user: true
+  unarchive:
+    src: /etc/artifact.tar.gz
+    dest: ~/udapeople/
+
+- name: "run backend"
+  become_user: true
   shell: |
-    cd ~/backend
-    npm install
-    #npm audit fix --force
-    pm2 stop default
-    pm2 start npm -- run start
-    cd dist
-    pm2 start main.js --update-env
+    cd ~/udapeople/
+    npm i
+    pm2 start npm -- run start 
