@@ -335,27 +335,17 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            yum install -y tar gzip
+            yum -y install tar gzip
+            curl -sL https://rpm.nodesource.com/setup_lts.x | bash -
+            yum -y install nodejs
       - run:
           name: Update cloudfront distribution
           command: |
-            export OldWorkflowID=$(aws cloudformation \
-            list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
-            --no-paginate --output text)
-            echo $OldWorkflowID > ~/OldWorkflowID.txt
-            cat ~/OldWorkflowID.txt
-            
-                       
             aws cloudformation deploy \
             --template-file .circleci/files/cloudfront.yml \
-            --stack-name InitialStack \
-            --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
+            --stack-name=InitalStack \
+            --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID}" \
             --tags project=udapeople
-            
-      - persist_to_workspace:
-          root: ~/
-          paths:
-            - OldWorkflowID.txt
       - destroy-environment
       - revert-migrations
       
@@ -363,40 +353,24 @@ jobs:
     docker:
       - image: amazon/aws-cli
     steps:
+      # Checkout code from git
       - checkout
       - run:
-          name: Install dependencies
+          name: Get old stack workflow id then remove the stack and files 
           command: |
-            yum install -y tar gzip
-            
-      # attach workspace
-      - attach_workspace:
-          at: ~/      
-      - run:
-          name: Remove old stacks and files
-          command: |
-            # your code here           
-            # Fetch the Old workflow ID
-            export OldWorkflowID=$(cat ~/OldWorkflowID.txt)
-            echo OldWorkflowID:"${OldWorkflowID}"
-            
-            export CurrentWorkflowID=$(aws cloudformation \
-            list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
+            export OldWorkflowID=$(aws cloudformation \
+            list-exports --query 'Exports[?Name==`WorkflowID`].Value' \
             --no-paginate --output text)
-            echo CurrentWorkflowID:"${CurrentWorkflowID}"
             
-            echo "udapeople-${OldWorkflowID}"
-            echo "udapeople-backend-${OldWorkflowID}"
-            echo "udapeople-frontend-${OldWorkflowID}"
-            
-            if [[ "${CurrentWorkflowID}" != "${OldWorkflowID}" ]]
+            export STACKS=($aws cloudformation list-stacks --query "StackSummaries[*].StackName" \
+            --stack-status-filter CREATE_COMPLETE --no-paginate --output text)          
+            echo Old Workflow Id: "${OldWorkflowID}"
+            echo New Workflow Id: "${CIRCLE_WORKFLOW_ID}"
+            if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]
             then
-                echo "i am in"
-                aws s3 rm "s3://udapeople-${OldWorkflowID}" --recursive
-                aws cloudformation delete-stack --stack-name "udapeople-backend-${OldWorkflowID}"
-                aws cloudformation delete-stack --stack-name "udapeople-frontend-${OldWorkflowID}"
-             else
-                echo "i am out"
+              aws s3 rm "s3://udapeople-${OldWorkflowID}" --recursive
+              aws cloudformation delete-stack --stack-name "udapeople-backend-${OldWorkflowID}"
+              aws cloudformation delete-stack --stack-name "udapeople-frontend--${OldWorkflowID}"
             fi
 
   
@@ -427,7 +401,4 @@ workflows:
           requires: [run-migrations]
       - smoke-test:
           requires: [deploy-backend, deploy-frontend]
-      - cloudfront-update:
-          requires: [smoke-test]
-      - cleanup:
-          requires: [cloudfront-update]   
+      - cleanup  
