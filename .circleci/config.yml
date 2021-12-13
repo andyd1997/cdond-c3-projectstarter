@@ -258,33 +258,49 @@ jobs:
       - attach_workspace:
           at: ~/
       - run:
-          name: Install dependencies
-          command: |
-            apk add --update ansible
-            apk add tar gzip
-            apk add curl
-            apk add gzip
-            apk add nodejs
-            apk add npm
-            pip install awscli
+            name: Install AWS CLI
+            command: |
+              pip install awscli
       - run:
-          name: Deploy backend
-          command: |
-           cd backend
-            npm i
-            npm run build
-            cd ..
-            # Zip the directory
-            tar -C backend -cf artifact.tar .
-            ls -lrth artifact.tar
-            mv artifact.tar ~/project/.circleci/ansible/roles/deploy/files
+            name: Install dependencies
+            command: |
+              apk add --update tar gzip ansible nodejs npm curl jq
       - run:
-          name: Deploy backend ansible
-          command: |           
-            cd .circleci/ansible
-            echo "Contents  of the inventory.txt file is -------"
-            cat inventory.txt 
-            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory.txt deploy-backend.yml -vv
+            name: installing openssh
+            command: |
+              apk add openssh-client
+      - restore_cache:
+            keys: backend-build-${CIRCLE_WORKFLOW_ID}
+            
+      - run:
+            name: Deploy backend
+            command: |
+              ls -la
+              echo "My current workspace is : $(pwd)" 
+              echo "BUILDING THE BACKEND ENVIRONMENT FILE"
+              echo NODE_ENV=production >> "backend/.env"
+              echo ENVIROMENT=production > backend/.env
+              echo TYPEORM_CONNECTION=postgres >> backend/.env
+              echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> backend/.env
+              echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> backend/.env
+              echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> backend/.env
+              echo TYPEORM_HOST=$TYPEORM_HOST >> backend/.env
+              echo TYPEORM_PORT=$TYPEORM_PORT >> backend/.env
+              echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> backend/.env
+              echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> backend/.env
+              echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> backend/.env
+
+              cd backend
+              npm i
+              npm run build
+              tar -czvf /etc/artifact.tar.gz ./
+              chmod 644 /etc/artifact.tar.gz
+              echo "here"
+              cd ..
+              pwd
+              cd .circleci/ansible
+              cat inventory.txt
+              ansible-playbook -i inventory.txt deploy-backend.yml
       
       
   smoke-test:
