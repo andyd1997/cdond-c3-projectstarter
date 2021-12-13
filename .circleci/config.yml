@@ -158,16 +158,17 @@ jobs:
               
               
       - run:
-          name: Add back-end ip to ansible inventory
-          command: |
-            aws ec2 describe-instances \
-              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --query "Reservations[*].Instances[*].PublicIpAddress" \
-              --output text >> .circleci/ansible/inventory.txt
+          name: Add back-end ec2 ip to ansible inventory file 
+          command: |               
+            export backend_IP=$(aws ec2 describe-instances \
+              --query 'Reservations[*].Instances[*].PublicIpAddress' \
+              --filters "Name=tag:Name,Values=ebackend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --output text >> .circleci/ansible/inventory.txt)
+            cat ./.circleci/ansible/inventory.txt
       - persist_to_workspace:
-          root: .circleci/
+          root: ~/
           paths:
-            - ansible/inventory.txt
+            - project/.circleci/ansible/inventory.txt
          
               
   configure-infrastructure:
@@ -182,26 +183,23 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            apk add --update ansible
-            cat .circleci/ansible/inventory.txt
+            apk add --update tar gzip ansible nodejs npm curl
+            pip install awscli
 
       - run:
-          name: Configure server
+          name: Setup inventory file
           command: |
-            pwd
-            ls
-            echo ENVIRONMENT=production > backend/.env
-            echo TYPEORM_CONNECTION=postgres >> backend/.env
-            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> backend/.env
-            echo TYPEORM_HOST=$TYPEORM_HOST >> backend/.env
-            echo TYPEORM_PORT=$TYPEORM_PORT >> backend/.env
-            echo TYPEORM_USERNAME= $TYPEORM_USERNAME >> backend/.env
-            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> backend/.env
-            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> backend/.env
-            cat backend/.env
             cd .circleci/ansible
-            ansible-playbook -i inventory.txt configure-server.yml
-      - destroy-environment
+            echo "[web]" >> inventory.txt
+            URLS=$(curl -H "token: 817f662a-e732-4a62-87ae-19e812bb83ce" --request GET https://api.memstash.io/values/url_${CIRCLE_WORKFLOW_ID:0:7})
+            echo $URLS >> inventory.txt
+            cat inventory.txt
+      - run:
+          name: Configure server
+          no_output_timeout: 30m
+          command: |
+            cd .circleci/ansible/
+            ansible-playbook -i inventory.txt main.yml
 
      
             
