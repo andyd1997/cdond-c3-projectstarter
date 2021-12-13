@@ -77,8 +77,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys:
-            - frontend-build2
+          keys: [frontend-build]
       - run:
           name: test-frontend
           command: |
@@ -92,7 +91,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["backend-build"]
+          keys: [backend-build]
       - run:
           name: backend-build
           command: |
@@ -105,6 +104,8 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
+      - restore_cache:
+          keys: [frontend-build]
       - run:
           name: frontend-build
           command: |
@@ -117,6 +118,8 @@ jobs:
       - image: circleci/node:13.8.0
     steps:
       - checkout
+      - restore_cache:
+          keys: [backend-build]
       - run:
           name: backend-build
           command: |
@@ -344,7 +347,7 @@ jobs:
             aws cloudformation deploy \
             --template-file .circleci/files/cloudfront.yml \
             --stack-name=InitalStack \
-            --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID}" \
+            --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
             --tags project=udapeople
       - destroy-environment
       - revert-migrations
@@ -401,4 +404,9 @@ workflows:
           requires: [run-migrations]
       - smoke-test:
           requires: [deploy-backend, deploy-frontend]
-      - cleanup  
+      - cloudfront-update:
+          requires: [smoke-test]
+      - cleanup:
+          requires: [cloudfront-update]
+
+      
