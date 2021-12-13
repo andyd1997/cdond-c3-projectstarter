@@ -249,53 +249,57 @@ jobs:
       - revert-migrations
 
   deploy-backend:
-    docker:
-      - image: centos:centos8
-    steps:
-      - checkout
-      - run:
-          name: Install dependencies
-          command: |
-            yum install -y epel-release
-            yum install -y tar gzip ansible nodejs npm python3
-      - add_ssh_keys:
-          name: Add ssh keys with fingerprint
-          fingerprints:
-            - "71:9d:d8:d7:d9:4f:2d:a1:33:fc:c6:1e:59:46:e0:b9"
-      - attach_workspace:
-          name: Attach Workspace
-          at: ~/
-      - run:
-          name: Build Artifacts
-          command: |
-            # Create .env file
-            echo ENVIRONMENT=production >> "backend/.env"
-            echo NODE_ENV=production >> "backend/.env"
-            echo TYPEORM_CONNECTION=postgres >> "backend/.env"
-            echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> "backend/.env"
-            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> "backend/.env"
-            echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> "backend/.env"
-            echo TYPEORM_HOST=$TYPEORM_HOST >> "backend/.env"
-            echo TYPEORM_PORT=$TYPEORM_PORT >> "backend/.env"
-            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
-            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
-            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"
-            tar -C backend -czvf artifact.tar.gz .
-            # Build Packages
-            cd backend
-            npm i
-            npm run build
-            # Tar package
-            cd ..
-            tar -C backend -czvf artifact.tar.gz .
-      - run:
-          name: Deploy backend
-          command: |
-            export ANSIBLE_HOST_KEY_CHECKING=False
-            cd ~/project/.circleci/ansible
-            echo "Contents  of the inventory.txt file is -------"
-            cat inventory.txt
-            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory.txt deploy-backend.yml
+      docker:
+        - image: python:3.7-alpine3.11
+      steps:
+        - checkout
+        - attach_workspace:
+            at: ~/
+        - add_ssh_keys:
+            fingerprints: ["71:9d:d8:d7:d9:4f:2d:a1:33:fc:c6:1e:59:46:e0:b9"] 
+        - run:
+            name: Install AWS CLI
+            command: |
+              pip install awscli
+        - run:
+            name: Install dependencies
+            command: |
+              apk add --update tar gzip ansible nodejs npm curl jq
+        - run:
+            name: installing openssh
+            command: |
+              apk add openssh-client
+        - restore_cache:
+            keys: backend-build-${CIRCLE_WORKFLOW_ID}
+            
+        - run:
+            name: Deploy backend
+            command: |
+              ls -la
+              echo "My current workspace is : $(pwd)" 
+              echo "BUILDING THE BACKEND ENVIRONMENT FILE"
+              echo NODE_ENV=production >> "backend/.env"
+              echo ENVIROMENT=production > backend/.env
+              echo TYPEORM_CONNECTION=postgres >> backend/.env
+              echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> backend/.env
+              echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> backend/.env
+              echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> backend/.env
+              echo TYPEORM_HOST=$TYPEORM_HOST >> backend/.env
+              echo TYPEORM_PORT=$TYPEORM_PORT >> backend/.env
+              echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> backend/.env
+              echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> backend/.env
+              echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> backend/.env
+              cd backend
+              npm i
+              npm run build
+              tar -czvf /etc/artifact.tar.gz ./
+              chmod 644 /etc/artifact.tar.gz
+              echo "here"
+              cd ..
+              pwd
+              cd .circleci/ansible
+              cat inventory.txt
+              ansible-playbook -i inventory.txt deploy-backend.yml
       
       
   smoke-test:
