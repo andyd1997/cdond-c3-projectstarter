@@ -280,14 +280,15 @@ jobs:
             echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
             echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
             echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"
-            tar -C backend -czvf artifact.tar.gz .
-            # Build Packages
+            
             cd backend
-            npm i
-            npm run build
-            # Tar package
-            cd ..
-            tar -C backend -czvf artifact.tar.gz .
+              npm i
+              npm run build
+              tar -czvf /etc/artifact.tar.gz ./
+              chmod 644 /etc/artifact.tar.gz
+              echo "here"
+              cd ..
+              pwd
       - run:
           name: Deploy backend
           command: |
