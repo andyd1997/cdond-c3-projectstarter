@@ -1,26 +1,59 @@
 ---
-- name: Creates App directory
+- name: Update apt packages
+  become: yes
+  apt:
+    update_cache: yes
+
+- name: Upgrade Packages
+  become: yes
+  apt:
+    upgrade: yes
+
+- name: Remove dependencies that are no longer required
+  become: yes
+  apt:
+    autoremove: yes
+
+- name: Install Dependencies
+  become: yes
+  apt:
+    name: ["nodejs", "npm", "python", "tar"]
+    state: latest
+    update_cache: yes
+
+- name: Install pm2
+  become: yes
+  npm:
+    name: pm2
+    global: yes
+    production: yes
+    state: present
+
+- name: Create backend directory
   file:
-    path: ~/app
+    path: ~/backend
     state: directory
-    
-- name: Upload app 
+
+# https://docs.ansible.com/ansible/2.4/copy_module.html
+- name: Copy Backend Artifacts
   copy:
-    src: files/artifact.tar
-    dest: "~/app"
+    src: ~/project/artifact.tar.gz
+    dest: ~/backend/artifact.tar.gz
+    mode: 0400
+    
+# https://docs.ansible.com/ansible/2.3/unarchive_module.html
+- name: Unarchive Backend Artifacts
+  unarchive:
+    src: ~/backend/artifact.tar.gz
+    dest: ~/backend
+    remote_src: True
 
-
-- name: Install dependencies
-  become: true
+- name: Start Application
   shell: |
-    curl -sL https://deb.nodesource.com/setup_13.x | sudo -E bash -
-    apt-get install -y nodejs
-    apt-get install gcc g++ make -y
-    npm install -g npm
-    npm install -g pm2
-    cd /home/ubuntu/app
-    tar xf /home/ubuntu/app/artifact.tar
-  
-- name: Start backend
-  shell:  |
-    /usr/bin/pm2 start /home/ubuntu/app/dist/main.js --name backend -f
+    cd ~/backend
+    npm install
+    #npm audit fix --force
+    pm2 stop default
+    pm2 start npm -- run start
+    cd dist
+    pm2 start main.js --update-env
