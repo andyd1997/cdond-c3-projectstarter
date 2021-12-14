@@ -389,11 +389,7 @@ jobs:
                 aws cloudformation delete-stack --stack-name "udapeople-frontend-${OldWorkflowID}"
              else
                 echo "i am out"
-            fi
-
-
-  
-             
+            fi       
     
 workflows:
   default:
