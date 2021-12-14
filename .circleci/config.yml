@@ -271,17 +271,9 @@ jobs:
       - attach_workspace:
           at: ~/
       - run:
-            name: Install AWS CLI
-            command: |
-              pip install awscli
-      - run:
-            name: Install dependencies
-            command: |
-              apk add --update tar gzip ansible nodejs npm curl jq
-      - run:
-            name: installing openssh
-            command: |
-              apk add openssh-client
+          name: Install dependencies
+          command: |
+            sudo apt-get install zip unzip python ansible python-pip && pip install awscli
       - run:
           name: Deploy backend
           command: |
