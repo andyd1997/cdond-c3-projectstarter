@@ -24,7 +24,7 @@ commands:
           name: Revert migrations
           command: |
             echo "revert migrations begins..."
-            SUCCESS=$(curl -H "token: 817f662a-e732-4a62-87ae-19e812bb83ce" --request GET https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID:0:7})
+            SUCCESS=$(curl -H "token: "7933fe63-4687-4fa1-8426-aa25aa1730ec" --request GET https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID:0:7})
             if (( $SUCCESS == 1));
             then
               echo "roll back migration started"
@@ -208,10 +208,10 @@ jobs:
           command: |
             if grep -q "has been executed successfully." ~/project/backend/migrations_dump.txt
             then
-              curl -H "Content-Type: text/plain" -H "token: 817f662a-e732-4a62-87ae-19e812bb83ce" --request PUT --data "1" https://api.memstash.io/values/udapeople_${CIRCLE_WORKFLOW_ID:0:7}
+              curl -H "Content-Type: text/plain" -H "token: "7933fe63-4687-4fa1-8426-aa25aa1730ec --request PUT --data "1" https://api.memstash.io/values/udapeople_${CIRCLE_WORKFLOW_ID:0:7}
             fi
-      - destroy-environment
-      - revert-migrations
+      #- destroy-environment
+      #- revert-migrations
 
   deploy-frontend:
     docker:
@@ -290,38 +290,38 @@ jobs:
       
   smoke-test:
     docker:
-      - image: python:3.7-alpine3.11 
+      - image: centos:centos8
     steps:
       - checkout
       - run:
           name: Install dependencies
           command: |
-            apk add --update ansible curl nodejs npm
-              pip install awscli
-              apk update
-              apk upgrade
-              apk add curl
+            yum install -y epel-release
+            yum install -y tar gzip nodejs npm curl awscli
+      - attach_workspace:
+          name: Attach Workspace
+          at: ~/           
       - run:
           name: Backend smoke test.
           command: |
-            export BACKEND_PUBLIC_DNS=$(curl -H "token: 817f662a-e732-4a62-87ae-19e812bb83ce" --request GET http://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID:0:7})
-            BACKEND_API_URL="http://${BACKEND_PUBLIC_DNS}:3030/api/status"
-            echo "Backend API URL: "$BACKEND_API_URL
-            echo ENVIRONMENT=production > "frontend/.env"
-            echo NODE_ENV=production >> "frontend/.env"
-            echo API_URL=$BACKEND_API_URL >> "frontend/.env"  
-            
+            # Fetch and prepare the BACKEND_IP env var
+            export BACKEND_IP=$(cat ~/project/.circleci/ansible/backend_host.txt)
+            export API_URL="http://${BACKEND_IP}:3030"
+            echo "${API_URL}"
+            curl "${API_URL}/api/status"
+            if curl "${API_URL}/api/status" | grep "ok"
+            then
+                return 0
+            else
+                return 1
+            fi
       - run:
           name: Frontend smoke test.
           command: |
-            URL="http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-eu-west-1.amazonaws.com/#/employees"            
+            URL="http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-us-east-1.amazonaws.com/#/employees"            
             echo ${URL} 
-            if curl -s ${URL} | grep "Welcome"
-            then
-              return 0
-            else
-              return 1
-            fi
+            curl -s ${URL} | grep "Welcome"
+      # Here's where you will add some code to rollback on failure   
       - destroy-environment
       - revert-migrations
 
