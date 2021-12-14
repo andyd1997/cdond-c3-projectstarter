@@ -133,75 +133,62 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Installing tar util
-          command: |
-            yum -y install tar gzip
+          command: yum install -y tar gzip
       - run:
           name: Ensure back-end infrastructure exists
           command: |
-            aws cloudformation deploy \
+              aws cloudformation deploy \
               --template-file .circleci/files/backend.yml \
-              --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}"\
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"\
+              --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  \
               --tags project=udapeople
-
-
-
       - run:
           name: Ensure front-end infrastructure exist
           command: |
-            aws cloudformation deploy \
+              aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
-              --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}"\
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"\
+              --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  \
               --tags project=udapeople
-              
-              
       - run:
           name: Add back-end ip to ansible inventory
           command: |
-            aws ec2 describe-instances \
-              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --query "Reservations[*].Instances[*].PublicIpAddress" \
-              --output text >> .circleci/ansible/inventory.txt
+            BACKEND_IP=$(aws ec2 describe-instances --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" --query "Reservations[*].Instances[*].{public_ip:PublicIpAddress}" --output text)
+            echo $BACKEND_IP >> .circleci/ansible/inventory.txt
+            echo $BACKEND_IP > .circleci/ansible/backend_host.txt
+            echo $BACKEND_IP
+      
       - persist_to_workspace:
-          root: .circleci/
+          root: ~/
           paths:
-            - ansible/inventory.txt
+            - project/.circleci/ansible/inventory.txt
+            - project/.circleci/ansible/backend_host.txt
          
               
   configure-infrastructure:
     docker:
-      - image: python:3.7-alpine3.11
+      - image: centos:centos8
     steps:
       - checkout
-      - add_ssh_keys:
-          fingerprints: ["71:9d:d8:d7:d9:4f:2d:a1:33:fc:c6:1e:59:46:e0:b9"]
-      - attach_workspace:
-          at: ~/
       - run:
           name: Install dependencies
           command: |
-            apk add --update ansible
-            cat .circleci/ansible/inventory.txt
+            yum install -y epel-release
+            yum install -y tar gzip ansible
+      - attach_workspace:
+          name: Attach Workspace
+          at: ~/
+      
+      - add_ssh_keys:
+          name: Add ssh keys with fingerprint
+          fingerprints:
+            - "71:9d:d8:d7:d9:4f:2d:a1:33:fc:c6:1e:59:46:e0:b9"
 
       - run:
           name: Configure server
           command: |
-            pwd
-            ls
-            echo ENVIRONMENT=production > backend/.env
-            echo TYPEORM_CONNECTION=postgres >> backend/.env
-            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> backend/.env
-            echo TYPEORM_HOST=$TYPEORM_HOST >> backend/.env
-            echo TYPEORM_PORT=$TYPEORM_PORT >> backend/.env
-            echo TYPEORM_USERNAME= $TYPEORM_USERNAME >> backend/.env
-            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> backend/.env
-            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> backend/.env
-            cat backend/.env
             cd .circleci/ansible
             ansible-playbook -i inventory.txt configure-server.yml
-      - destroy-environment
 
      
             
