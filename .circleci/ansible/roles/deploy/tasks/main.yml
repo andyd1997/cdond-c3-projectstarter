@@ -1,21 +1,26 @@
 ---
-
-- name: "Create directory"
-  become_user: true
+- name: Creates App directory
   file:
-    path: ~/udapeople/
+    path: ~/app
     state: directory
+    
+- name: Upload app 
+  copy:
+    src: files/artifact.tar
+    dest: "~/app"
 
 
-- name: "deploy backend"
-  become_user: true
-  unarchive:
-    src: /etc/artifact.tar.gz
-    dest: ~/udapeople/
-
-- name: "run backend"
-  become_user: true
+- name: Install dependencies
+  become: true
   shell: |
-    cd ~/udapeople/
-    npm i
-    pm2 start npm -- run start 
+    curl -sL https://deb.nodesource.com/setup_13.x | sudo -E bash -
+    apt-get install -y nodejs
+    apt-get install gcc g++ make -y
+    npm install -g npm
+    npm install -g pm2
+    cd /home/ubuntu/app
+    tar xf /home/ubuntu/app/artifact.tar
+  
+- name: Start backend
+  shell:  |
+    /usr/bin/pm2 start /home/ubuntu/app/dist/main.js --name backend -f
