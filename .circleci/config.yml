@@ -271,7 +271,7 @@ jobs:
           name: Attach Workspace
           at: ~/
       - run:
-          name: Build Artifacts
+          name: Deploy backend
           command: |
             # Create .env file
             echo ENVIRONMENT=production >> "backend/.env"
@@ -285,22 +285,19 @@ jobs:
             echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
             echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
             echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"
-            tar -C backend -czvf artifact.tar.gz .
-            # Build Packages
+
             cd backend
             npm i
             npm run build
-            # Tar package
+            cp package* ./dist
             cd ..
             tar -C backend -czvf artifact.tar.gz .
-      - run:
-          name: Deploy backend
-          command: |
-            export ANSIBLE_HOST_KEY_CHECKING=False
             cd .circleci/ansible
             echo "Contents  of the inventory.txt file is -------"
             cat inventory.txt
             ansible-playbook -i inventory.txt deploy-backend.yml
+            
+      
       
       
   smoke-test:
