@@ -161,6 +161,7 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
+            - project/.circleci/ansible/backend_host.txt
          
               
   configure-infrastructure:
@@ -213,10 +214,13 @@ jobs:
             npm install
             npm run migrations > migration.log
             export migration_status=$(cat migration.log | grep -c "has been executed successfully")
+            tar -zcvf ~/backend.tar.gz .
+            ls
       - persist_to_workspace:
           root: ~/
           paths:
             - migration.log
+            - backend.tar.gz
       - run:
           name: Send migration results to memstash
           command: |
@@ -299,6 +303,7 @@ jobs:
             npm i
             npm run build
             cd ..
+            tar -C backend -czvf artifact.tar.gz .
             export ANSIBLE_HOST_KEY_CHECKING=False
             cd ~/project/.circleci/ansible
             echo "Contents  of the inventory.txt file is -------"
