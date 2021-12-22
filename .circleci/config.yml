@@ -229,7 +229,7 @@ jobs:
             then
               curl -H "Content-Type: text/plain" -H "token: 7933fe63-4687-4fa1-8426-aa25aa1730ec" --request PUT --data "1" https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID:0:7}
             fi
-            
+
   deploy-frontend:
     docker:
       - image: centos:centos8
@@ -336,17 +336,11 @@ jobs:
       - run:
           name: Backend smoke test.
           command: |
-            # Fetch and prepare the BACKEND_IP env var
-            export BACKEND_IP=$(cat ~/project/.circleci/ansible/backend_host.txt)
-            export API_URL="http://${BACKEND_IP}:3030"
-            echo "${API_URL}"
-            curl "${API_URL}/api/status"
-            if curl "${API_URL}/api/status" | grep "ok"
-            then
-                return 0
-            else
-                return 1
-            fi
+            BACKEND_IP=`cat .circleci/ansible/inventory.txt | head -2 | tail -1`
+            echo ${BACKEND_IP}
+            export URL="http://$BACKEND_IP:3030/api/status"
+            echo $URL
+            curl $URL
       - run:
           name: Frontend smoke test.
           command: |
