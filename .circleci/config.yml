@@ -162,7 +162,6 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
-            - project/.circleci/ansible/backend_host.txt
          
               
   configure-infrastructure:
@@ -215,12 +214,9 @@ jobs:
             npm install
             npm run migrations > migration.log
             export migration_status=$(cat migration.log | grep -c "has been executed successfully")
-            tar -zcvf ~/backend.tar.gz .
-            ls
       - persist_to_workspace:
           root: ~/
           paths:
-            - backend.tar.gz
             - migration.log
       - run:
           name: Send migration results to memstash
@@ -244,9 +240,6 @@ jobs:
           name: Install AWS CLI
           command: |
             yum install awscli -y
-            #curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-            #unzip awscliv2.zip
-            #./aws/install
       - attach_workspace:
           name: Attach Workspace
           at: ~/
@@ -304,11 +297,9 @@ jobs:
             echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"
 
             tar -C backend -czvf artifact.tar.gz .
-            # Build Packages
             cd backend
             npm i
             npm run build
-            # Tar package
             cd ..
             tar -C backend -czvf artifact.tar.gz .
             export ANSIBLE_HOST_KEY_CHECKING=False
@@ -346,8 +337,7 @@ jobs:
           command: |
             URL="http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-eu-west-1.amazonaws.com/#/employees"            
             echo ${URL} 
-            curl -s ${URL} | grep "Welcome"
-      # Here's where you will add some code to rollback on failure   
+            curl -s ${URL} | grep "Welcome" 
       #- destroy-environment
       #- revert-migrations
 
